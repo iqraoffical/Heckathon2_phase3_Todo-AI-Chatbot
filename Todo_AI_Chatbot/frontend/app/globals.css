@@ -1,0 +1,148 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%; /* White background */
+    --foreground: 0 0% 0%; /* Black foreground */
+
+    --card: 0 0% 100%; /* White card */
+    --card-foreground: 0 0% 0%; /* Black card foreground */
+
+    --popover: 0 0% 100%; /* White popover */
+    --popover-foreground: 0 0% 0%; /* Black popover foreground */
+
+    --primary: 48 100% 50%; /* Gold primary */
+    --primary-foreground: 0 0% 0%; /* Black primary foreground */
+
+    --secondary: 0 0% 0%; /* Black secondary */
+    --secondary-foreground: 0 0% 100%; /* White secondary foreground */
+
+    --muted: 0 0% 0%; /* Black muted */
+    --muted-foreground: 0 0% 100%; /* White muted foreground */
+
+    --accent: 48 100% 50%; /* Gold accent */
+    --accent-foreground: 0 0% 0%; /* Black accent foreground */
+
+    --destructive: 0 84.2% 60.2%; /* Red destructive */
+    --destructive-foreground: 210 40% 98%; /* Light foreground for destructive */
+
+    --border: 0 0% 0%; /* Black border */
+    --input: 0 0% 0%; /* Black input */
+    --ring: 48 100% 50%; /* Gold ring */
+
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 0 0% 0%; /* Black background */
+    --foreground: 0 0% 100%; /* White foreground */
+
+    --card: 0 0% 0%; /* Black card */
+    --card-foreground: 0 0% 100%; /* White card foreground */
+
+    --popover: 0 0% 0%; /* Black popover */
+    --popover-foreground: 0 0% 100%; /* White popover foreground */
+
+    --primary: 48 100% 50%; /* Gold primary */
+    --primary-foreground: 0 0% 0%; /* Black primary foreground */
+
+    --secondary: 0 0% 100%; /* White secondary */
+    --secondary-foreground: 0 0% 0%; /* Black secondary foreground */
+
+    --muted: 0 0% 100%; /* White muted */
+    --muted-foreground: 0 0% 0%; /* Black muted foreground */
+
+    --accent: 48 100% 50%; /* Gold accent */
+    --accent-foreground: 0 0% 0%; /* Black accent foreground */
+
+    --destructive: 0 62.8% 30.6%; /* Red destructive */
+    --destructive-foreground: 210 40% 98%; /* Light foreground for destructive */
+
+    --border: 0 0% 100%; /* White border */
+    --input: 0 0% 100%; /* White input */
+    --ring: 48 100% 50%; /* Gold ring */
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* Glassmorphism effect */
+.glass {
+  background: rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(218, 165, 32, 0.3); /* Gold border */
+}
+
+/* Gradient text */
+.gradient-text {
+  background: linear-gradient(90deg, #000000, #D4AF37, #FFFFFF);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Enhanced typography */
+.text-primary {
+  @apply text-white;
+}
+
+.text-secondary {
+  @apply text-gray-300;
+}
+
+.text-accent {
+  @apply text-yellow-400;
+}
+
+.text-muted {
+  @apply text-gray-500;
+}
+
+.font-display {
+  font-weight: 700;
+}
+
+.font-body {
+  font-weight: 400;
+}
+
+/* Improved contrast for better readability */
+.text-high-contrast {
+  color: #ffffff;
+  text-shadow: 0 0 8px rgba(255, 255, 255, 0.1);
+}
+
+.text-gold-highlight {
+  color: #D4AF37;
+  text-shadow: 0 0 10px rgba(212, 175, 55, 0.3);
+}
+
+/* Animated gradient background */
+.animated-gradient-bg {
+  background-size: 400% 400%;
+  animation: gradient 15s ease infinite;
+}
+
+@keyframes gradient {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
