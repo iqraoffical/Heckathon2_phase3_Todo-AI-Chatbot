@@ -1,102 +1,150 @@
-# Task Manager App with Python Backend
+# Todo AI Chatbot
 
-A secure task management application built with Next.js frontend and Python FastAPI backend.
+A comprehensive task management application with AI-powered chatbot functionality.
 
 ## Features
 
-- User authentication with email/password (handled by Python backend)
-- JWT-based session management
-- Protected routes
-- Responsive UI with Tailwind CSS
-- Task management functionality
+- **Task Management**: Create, read, update, delete, and mark tasks as complete
+- **AI Chatbot**: Natural language interface to manage tasks using OpenAI
+- **Authentication**: Secure user authentication with Better Auth
+- **Responsive UI**: Mobile-friendly interface built with React and Tailwind CSS
+- **Real-time Updates**: Live updates for task management
 
-## Prerequisites
+## Architecture
 
-- Node.js (v18 or higher)
-- Python 3.8+
-- npm or yarn
+This is a monorepo project with the following structure:
+
+```
+Todo_AI_Chatbot/
+├── specs/                    # Specification documents
+│   ├── task-crud.md         # Task CRUD operations spec
+│   ├── rest-endpoints.md    # REST API endpoints spec
+│   └── schema.md            # Database schema spec
+├── backend/                 # FastAPI backend
+│   ├── main.py              # Application entry point
+│   ├── models.py            # Database models
+│   ├── db.py                # Database setup
+│   ├── routes/              # API routes
+│   ├── auth.py              # Authentication utilities
+│   ├── config.py            # Configuration
+│   ├── mcp_tools.py         # MCP tools implementation
+│   └── ai_agents.py         # AI agents integration
+├── frontend/                # Next.js frontend
+│   ├── pages/               # Page components
+│   ├── components/          # Reusable components
+│   ├── lib/                 # Utilities and services
+│   └── styles/              # Styling
+├── app/                     # Next.js app directory
+└── README.md               # This file
+```
 
 ## Setup Instructions
 
-### 1. Backend Setup
+### Backend Setup
 
-First, start your Python backend:
-
+1. Navigate to the backend directory:
 ```bash
 cd backend
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-pip install -r requirements.txt
-uvicorn app.main:app --reload --port 8000
 ```
 
-### 2. Frontend Setup
+2. Install Python dependencies:
+```bash
+pip install -r requirements.txt
+```
 
-In a new terminal, navigate to the project root and set up the frontend:
+3. Set up environment variables in `.env`:
+```env
+BETTER_AUTH_SECRET=S4paj8zsSf3ZIK0bKIwthxQjXzdbhjMI
+DATABASE_URL=postgresql://neondb_owner:npg_FBcnSA3wM0Tk@ep-jolly-rain-a7lzfvk3-pooler.ap-southeast-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require
+API_URL=http://localhost:8000
+OPENAI_API_KEY=your_openai_api_key_here
+```
 
+4. Start the backend server:
+```bash
+uvicorn main:app --reload --port 8000
+```
+
+### Frontend Setup
+
+1. Navigate to the frontend directory:
+```bash
+cd frontend
+```
+
+2. Install JavaScript dependencies:
 ```bash
 npm install
 ```
 
-### 3. Environment Variables
+3. Set up environment variables in `.env.local`:
+```env
+NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
+NEXT_PUBLIC_BETTER_AUTH_URL=http://localhost:3000
+NEXT_PUBLIC_JWT_SECRET=cb596cc800d58094bdcdcc48f89f48e1158fc6ad17b49cdee775b50eff63858a
+NEXT_PUBLIC_BASE_URL=http://localhost:3000
+```
 
-Update the values in `.env.local`:
-- `NEXT_PUBLIC_API_BASE_URL`: URL of your Python backend (default: http://localhost:8000)
-
-### 4. Run the Development Server
-
+4. Start the frontend development server:
 ```bash
 npm run dev
 ```
 
-### 5. Access the Application
+## API Endpoints
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+The backend provides the following RESTful API endpoints:
 
-## Available Pages
+### Task Management
+- `POST /api/{user_id}/tasks` - Create a new task
+- `GET /api/{user_id}/tasks` - Get all tasks for a user
+- `GET /api/{user_id}/tasks/{task_id}` - Get a specific task
+- `PUT /api/{user_id}/tasks/{task_id}` - Update a task
+- `DELETE /api/{user_id}/tasks/{task_id}` - Delete a task
+- `PATCH /api/{user_id}/tasks/{task_id}/complete` - Mark a task as complete
 
-- `/` - Home page with sign in/up options
-- `/signin` - Sign in page
-- `/signup` - Sign up page
-- `/tasks` - Protected tasks page
+### Chat Interface
+- `POST /api/{user_id}/chat` - Send a message to the AI chatbot
 
-## Troubleshooting
+All endpoints require authentication via JWT token in the Authorization header.
 
-### "Failed to fetch" error on sign-in
+## MCP Tools
 
-This error typically occurs due to:
-- Backend server not running on the configured port
-- Incorrect `NEXT_PUBLIC_API_BASE_URL` in environment variables
-- CORS issues
+The AI chatbot uses the following MCP (Model Context Protocol) tools:
 
-Make sure your Python backend is running on the port specified in `NEXT_PUBLIC_API_BASE_URL`.
+- `add_task(title, description, due_date)` - Add a new task
+- `list_tasks(completed)` - List tasks (filter by completion status)
+- `complete_task(task_id)` - Mark a task as complete
+- `delete_task(task_id)` - Delete a task
+- `update_task(task_id, title, description, due_date, completed)` - Update a task
 
-### Redirect issues on protected routes
+## Technologies Used
 
-If you're being redirected to the sign-in page even when logged in:
-- Clear your browser cache and cookies
-- Ensure your environment variables are properly set
-- Verify that the backend authentication endpoints are accessible
+### Backend
+- FastAPI - Web framework
+- SQLModel - Database ORM
+- PostgreSQL (Neon) - Database
+- Better Auth - Authentication
+- OpenAI API - AI capabilities
+- uvicorn - ASGI server
 
-## Project Structure
+### Frontend
+- Next.js - React framework
+- React - UI library
+- Tailwind CSS - Styling
+- TypeScript - Type safety
+- Axios - HTTP client
 
-```
-app/
-├── signin/page.tsx                     # Sign in page
-├── signup/page.tsx                     # Sign up page
-├── tasks/page.tsx                      # Protected tasks page
-├── layout.tsx                          # Root layout
-├── page.tsx                           # Home page
-└── globals.css                        # Global styles
-lib/
-└── auth-client.ts                     # Client for Python backend auth
-middleware.ts                          # Authentication middleware
-.env.local                             # Environment variables
-backend/                               # Python FastAPI backend
-```
+## Development
 
-## Security Notes
+To contribute to this project:
 
-- Change the default secrets in your Python backend before deploying to production
-- Use HTTPS in production environments
-- Regularly update dependencies to patch security vulnerabilities
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Make your changes
+4. Commit your changes (`git commit -m 'Add some amazing feature'`)
+5. Push to the branch (`git push origin feature/amazing-feature`)
+6. Open a Pull Request
+
+## License
+
+This project is licensed under the MIT License.

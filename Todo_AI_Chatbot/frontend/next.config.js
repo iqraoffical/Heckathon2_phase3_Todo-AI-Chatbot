@@ -1,17 +1,12 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   experimental: {
-    typedRoutes: true,
+    appDir: true,
   },
   images: {
     domains: ['localhost', '127.0.0.1'],
   },
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
-  typescript: {
-    ignoreBuildErrors: true,
-  },
+  output: 'export', // This ensures compatibility with static hosting
 };
 
 module.exports = nextConfig;

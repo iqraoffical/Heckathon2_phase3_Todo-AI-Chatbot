@@ -1,194 +1,229 @@
+// app/tasks/page.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Search, Plus, Filter, Calendar, Flag, CheckCircle, Circle, Clock, BarChart3, Target } from 'lucide-react';
-import { Task } from '@/lib/api';
-import { apiClient } from '@/lib/api';
-import TaskList from '@/components/TaskList';
-import TaskFilters from '@/components/TaskFilters';
-import Sidebar from '@/components/Sidebar';
+import React, { useState, useEffect } from 'react';
+import { Task } from '../../lib/types';
+import { taskApi } from '../../lib/api';
+import TaskItem from '../../components/TaskItem';
+import TaskForm from '../../components/TaskForm';
 
-export default function TasksPage({
-  searchParams
-}: {
-  searchParams: { [key: string]: string | string[] | undefined };
-}) {
+// Mock user ID - in a real app, this would come from authentication
+const userId = '123e4567-e89b-12d3-a456-426614174000';
+
+export default function TasksPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  // Extract filters from URL params
-  const search = typeof searchParams.search === 'string' ? searchParams.search : '';
-  const status = typeof searchParams.status === 'string' ? searchParams.status : '';
-  const priority = typeof searchParams.priority === 'string' ? searchParams.priority : '';
-  const category = typeof searchParams.category === 'string' ? searchParams.category : '';
-  const projectId = typeof searchParams.project_id === 'string' ? searchParams.project_id : '';
-  const tags = typeof searchParams.tags === 'string' ? searchParams.tags : ''; // Extract tags from URL params
-  const dueDateFrom = typeof searchParams.due_date_from === 'string' ? searchParams.due_date_from : ''; // Extract due date from from URL params
-  const dueDateTo = typeof searchParams.due_date_to === 'string' ? searchParams.due_date_to : ''; // Extract due date to from URL params
+  const [showForm, setShowForm] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [filter, setFilter] = useState<'all' | 'active' | 'completed'>('all');
 
   useEffect(() => {
-    const fetchTasks = async () => {
-      try {
-        setLoading(true);
-
-        // Prepare filters object
-        const filters: Record<string, string> = {};
-        if (search) filters.search = search;
-        if (status) filters.status = status;
-        if (priority) filters.priority = priority;
-        if (category) filters.category = category;
-        if (projectId) filters.project_id = projectId;
-        if (tags) filters.tags = tags; // Add tags filter
-        if (dueDateFrom) filters.due_date_from = dueDateFrom; // Add due date from filter
-        if (dueDateTo) filters.due_date_to = dueDateTo; // Add due date to filter
-
-        const tasksData = await apiClient.getTasks(filters);
-        setTasks(tasksData);
-        setError(null);
-      } catch (err) {
-        console.error('Error fetching tasks:', err);
-        setError('Failed to load tasks. Please try again later.');
-        setTasks([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchTasks();
-  }, [search, status, priority, category, projectId, tags, dueDateFrom, dueDateTo]); // Add tags and date filters to dependency array
+  }, [filter]);
 
-  // Stats calculation
-  const totalTasks = tasks.length;
-  const completedTasks = tasks.filter(task => task.status === 'completed').length;
-  const pendingTasks = totalTasks - completedTasks;
-  const highPriorityTasks = tasks.filter(task => task.priority === 'high').length;
+  const fetchTasks = async () => {
+    try {
+      setLoading(true);
+      const tasksData = await taskApi.getTasks(userId, {
+        completed: filter === 'completed' ? true : filter === 'active' ? false : undefined
+      });
+      setTasks(tasksData);
+    } catch (error) {
+      console.error('Error fetching tasks:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddTask = async (taskData: Partial<Task>) => {
+    try {
+      const newTask = await taskApi.createTask(userId, taskData);
+      setTasks([...tasks, newTask]);
+      setShowForm(false);
+    } catch (error) {
+      console.error('Error adding task:', error);
+    }
+  };
+
+  const handleUpdateTask = async (taskData: Partial<Task>) => {
+    if (!editingTask) return;
+
+    try {
+      const updatedTask = await taskApi.updateTask(userId, editingTask.id, taskData);
+      setTasks(tasks.map(t => t.id === editingTask.id ? updatedTask : t));
+      setEditingTask(null);
+      setShowForm(false);
+    } catch (error) {
+      console.error('Error updating task:', error);
+    }
+  };
+
+  const handleToggleComplete = async (taskId: string) => {
+    try {
+      const taskToComplete = tasks.find(t => t.id === taskId);
+      if (taskToComplete) {
+        if (taskToComplete.completed) {
+          // If task is already completed, we would need an update call to uncomplete it
+          const updatedTask = await taskApi.updateTask(userId, taskId, { completed: false });
+          setTasks(tasks.map(t => t.id === taskId ? updatedTask : t));
+        } else {
+          const completedTask = await taskApi.completeTask(userId, taskId);
+          setTasks(tasks.map(t => t.id === taskId ? completedTask : t));
+        }
+      }
+    } catch (error) {
+      console.error('Error toggling task completion:', error);
+    }
+  };
+
+  const handleDeleteTask = async (taskId: string) => {
+    if (window.confirm('Are you sure you want to delete this task?')) {
+      try {
+        await taskApi.deleteTask(userId, taskId);
+        setTasks(tasks.filter(t => t.id !== taskId));
+      } catch (error) {
+        console.error('Error deleting task:', error);
+      }
+    }
+  };
+
+  const handleEditTask = (task: Task) => {
+    setEditingTask(task);
+    setShowForm(true);
+  };
+
+  const handleFormSubmit = editingTask ? handleUpdateTask : handleAddTask;
+  const formTitle = editingTask ? 'Edit Task' : 'Add New Task';
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading tasks...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="pt-32 p-4 md:p-8 bg-gradient-to-br from-black via-gray-900 to-black min-h-[calc(100vh-200px)]">
-      <div className="flex">
-        <Sidebar />
-        <div className="flex-1 md:ml-64">
-          <div className="max-w-7xl mx-auto">
-            {/* Header */}
-            <motion.div
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mb-8"
-            >
-              <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-yellow-500 via-yellow-600 to-yellow-700 bg-clip-text text-transparent font-extrabold">
-                My Tasks
-              </h1>
-              <p className="text-white mt-2 font-medium">Manage your tasks efficiently</p>
-            </motion.div>
+    <div className="min-h-screen bg-gray-50">
+      {/* Navigation */}
+      <nav className="bg-white shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between h-16">
+            <div className="flex items-center">
+              <a href="/" className="flex-shrink-0 flex items-center">
+                <span className="text-xl font-bold text-blue-600">Todo AI</span>
+              </a>
+            </div>
+            <div className="hidden md:flex items-center space-x-8">
+              <a href="/tasks" className="text-blue-600 font-medium border-b-2 border-blue-600">
+                Tasks
+              </a>
+              <a href="/chat" className="text-gray-700 hover:text-blue-600 font-medium">
+                Chat
+              </a>
+              <a href="/login" className="px-4 py-2 border border-transparent rounded-md text-base font-medium text-blue-700 bg-blue-100 hover:bg-blue-200">
+                Sign in
+              </a>
+            </div>
+          </div>
+        </div>
+      </nav>
 
-            {/* Stats Cards */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"
-            >
-              <Card className="glass backdrop-blur-xl border-yellow-500/30 bg-gradient-to-br from-black/30 to-black/10">
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium text-white text-high-contrast">Total Tasks</CardTitle>
-                  <div className="p-2 bg-gradient-to-r from-yellow-500/20 to-yellow-600/20 rounded-lg">
-                    <BarChart3 className="h-5 w-5 text-white" />
+      <div className="container mx-auto px-4 py-8">
+        <div className="max-w-4xl mx-auto">
+          <div className="bg-white rounded-xl shadow-md overflow-hidden">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+                <h1 className="text-2xl font-bold text-gray-800 mb-4 md:mb-0">Your Tasks</h1>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <select
+                    value={filter}
+                    onChange={(e) => setFilter(e.target.value as 'all' | 'active' | 'completed')}
+                    className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="all">All Tasks</option>
+                    <option value="active">Active</option>
+                    <option value="completed">Completed</option>
+                  </select>
+                  <button
+                    onClick={() => {
+                      setEditingTask(null);
+                      setShowForm(true);
+                    }}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center justify-center"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
+                    </svg>
+                    Add Task
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {showForm && (
+              <div className="p-6 border-b border-gray-200 bg-blue-50">
+                <h2 className="text-xl font-semibold text-gray-800 mb-4">{formTitle}</h2>
+                <TaskForm
+                  onSubmit={handleFormSubmit}
+                  onCancel={() => {
+                    setShowForm(false);
+                    setEditingTask(null);
+                  }}
+                  initialData={editingTask || undefined}
+                />
+              </div>
+            )}
+
+            <div className="p-6">
+              {tasks.length === 0 ? (
+                <div className="text-center py-12">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mx-auto text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                  </svg>
+                  <h3 className="mt-4 text-lg font-medium text-gray-900">No tasks found</h3>
+                  <p className="mt-1 text-gray-500">Get started by creating a new task.</p>
+                  <div className="mt-6">
+                    <button
+                      onClick={() => {
+                        setEditingTask(null);
+                        setShowForm(true);
+                      }}
+                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    >
+                      Create your first task
+                    </button>
                   </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-white text-high-contrast">{totalTasks}</div>
-                </CardContent>
-              </Card>
-
-              <Card className="glass backdrop-blur-xl border-yellow-500/30 bg-gradient-to-br from-black/30 to-black/10">
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium text-white text-high-contrast">Completed</CardTitle>
-                  <div className="p-2 bg-gradient-to-r from-yellow-500/20 to-yellow-600/20 rounded-lg">
-                    <CheckCircle className="h-5 w-5 text-white" />
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-white text-high-contrast">{completedTasks}</div>
-                </CardContent>
-              </Card>
-
-              <Card className="glass backdrop-blur-xl border-yellow-500/30 bg-gradient-to-br from-black/30 to-black/10">
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium text-white text-high-contrast">Pending</CardTitle>
-                  <div className="p-2 bg-gradient-to-r from-yellow-500/20 to-yellow-600/20 rounded-lg">
-                    <Clock className="h-5 w-5 text-white" />
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-white text-high-contrast">{pendingTasks}</div>
-                </CardContent>
-              </Card>
-
-              <Card className="glass backdrop-blur-xl border-yellow-500/30 bg-gradient-to-br from-black/30 to-black/10">
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium text-white text-high-contrast">High Priority</CardTitle>
-                  <div className="p-2 bg-gradient-to-r from-yellow-500/20 to-yellow-600/20 rounded-lg">
-                    <Target className="h-5 w-5 text-white" />
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-white text-high-contrast">{highPriorityTasks}</div>
-                </CardContent>
-              </Card>
-            </motion.div>
-
-            {/* Filters and Search */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="mb-8"
-            >
-              <TaskFilters />
-            </motion.div>
-
-            {/* Task List */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-            >
-              <Card className="glass backdrop-blur-xl border-yellow-500/30 bg-gradient-to-br from-black/30 to-black/10">
-                <CardHeader>
-                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                    <CardTitle className="text-white text-high-contrast font-bold">Your Tasks</CardTitle>
-                    <div className="flex flex-wrap gap-2">
-                      <Button className="bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-black">
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add Task
-                      </Button>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <TaskList searchParams={searchParams} />
-                </CardContent>
-              </Card>
-            </motion.div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {tasks.map(task => (
+                    <TaskItem
+                      key={task.id}
+                      task={task}
+                      onToggleComplete={handleToggleComplete}
+                      onDelete={handleDeleteTask}
+                      onEdit={handleEditTask}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
-    </div>
-  );
-}
 
-// Clipboard icon component since it's not in lucide-react
-function ClipboardIcon({ className }: { className?: string }) {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <rect width="8" height="4" x="8" y="2" rx="1" ry="1"/>
-      <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
-    </svg>
+      {/* Footer */}
+      <footer className="bg-gray-800 text-white py-8 mt-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <p className="text-gray-400">
+            &copy; {new Date().getFullYear()} Todo AI Chatbot. All rights reserved.
+          </p>
+        </div>
+      </footer>
+    </div>
   );
 }

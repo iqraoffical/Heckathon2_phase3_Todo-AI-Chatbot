@@ -1,51 +1,27 @@
-import axios from 'axios';
-import { getJwtToken } from './auth-client';
+// lib/api.ts
+import axios, { AxiosResponse } from 'axios';
+import { Task, ChatRequest, ChatResponse } from './types';
 
-// Base API URL - can be configured via environment variables
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
 
-// Define types for our API responses
-export interface Task {
-  id: string;
-  title: string;
-  description?: string;
-  status: 'todo' | 'in_progress' | 'completed';
-  priority: 'low' | 'medium' | 'high';
-  due_date?: string; // ISO date string
-  tags?: string[];
-  category?: string;
-  estimated_time?: number; // Estimated time in minutes
-  actual_time_spent?: number; // Actual time spent in minutes
-  project_id?: string;
-  created_at: string; // ISO date string
-  updated_at: string; // ISO date string
-  user_id: string;
-}
-
-// Define types for Project API responses
-export interface Project {
-  id: string;
-  name: string;
-  description?: string;
-  user_id: string;
-  created_at: string; // ISO date string
-  updated_at: string; // ISO date string
-}
-
-// Create an Axios instance for API calls
-const axiosInstance = axios.create({
+// Create axios instance with defaults
+const apiClient = axios.create({
   baseURL: API_BASE_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
 });
 
-// Request interceptor to add JWT token to all requests
-axiosInstance.interceptors.request.use(
-  async (config) => {
-    const token = await getJwtToken();
-
+// Request interceptor to add auth token
+apiClient.interceptors.request.use(
+  (config) => {
+    // Get token from wherever you store it (localStorage, cookie, etc.)
+    const token = localStorage.getItem('auth_token');
+    
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-
+    
     return config;
   },
   (error) => {
@@ -53,153 +29,68 @@ axiosInstance.interceptors.request.use(
   }
 );
 
-// Response interceptor to handle 401 errors (token expired/invalid)
-axiosInstance.interceptors.response.use(
+// Response interceptor to handle errors
+apiClient.interceptors.response.use(
   (response) => response,
-  async (error) => {
+  (error) => {
+    // Handle specific error cases
     if (error.response?.status === 401) {
-      // Token might be expired or invalid
-      console.error('Unauthorized access - token may be expired');
+      // Redirect to login or clear auth state
+      localStorage.removeItem('auth_token');
+      window.location.href = '/login'; // Or however you handle auth redirects
     }
-
     return Promise.reject(error);
   }
 );
 
-// Define the API client with JWT token handling
-class ApiClient {
-  // Get all tasks for the authenticated user with optional filters
-  async getTasks(filters?: {
-    search?: string;
-    status?: 'all' | 'pending' | 'completed';
-    priority?: 'high' | 'medium' | 'low';
-    category?: string;
-    project_id?: string;
-    tags?: string; // Comma-separated tag values
-    due_date_from?: string; // Filter tasks with due date greater than or equal to this date
-    due_date_to?: string; // Filter tasks with due date less than or equal to this date
-    sort_by?: 'created' | 'due_date' | 'priority' | 'title' | 'category' | 'project_id';
-    order?: 'asc' | 'desc';
-  }): Promise<Task[]> {
-    // Build query string from filters
-    const params = new URLSearchParams();
-    if (filters) {
-      Object.entries(filters).forEach(([key, value]) => {
-        if (value !== undefined && value !== null) {
-          params.append(key, String(value));
-        }
-      });
-    }
-
-    const queryString = params.toString();
-    const endpoint = queryString ? `/tasks?${queryString}` : '/tasks';
-
-    const response = await axiosInstance.get<Task[]>(endpoint);
+// Task API functions
+export const taskApi = {
+  // Get all tasks for a user
+  getTasks: async (userId: string, params?: { completed?: boolean; limit?: number; offset?: number }): Promise<Task[]> => {
+    const response: AxiosResponse<Task[]> = await apiClient.get(`/api/${userId}/tasks`, { params });
     return response.data;
-  }
+  },
+
+  // Get a single task
+  getTask: async (userId: string, taskId: string): Promise<Task> => {
+    const response: AxiosResponse<Task> = await apiClient.get(`/api/${userId}/tasks/${taskId}`);
+    return response.data;
+  },
 
   // Create a new task
-  async createTask(taskData: Omit<Task, 'id' | 'created_at' | 'updated_at' | 'user_id'>): Promise<Task> {
-    const response = await axiosInstance.post<Task>('/tasks', taskData);
+  createTask: async (userId: string, taskData: Partial<Task>): Promise<Task> => {
+    const response: AxiosResponse<Task> = await apiClient.post(`/api/${userId}/tasks`, taskData);
     return response.data;
-  }
+  },
 
-  // Update an existing task
-  async updateTask(id: string, taskData: Partial<Task>): Promise<Task> {
-    const response = await axiosInstance.put<Task>(`/tasks/${id}`, taskData);
+  // Update a task
+  updateTask: async (userId: string, taskId: string, taskData: Partial<Task>): Promise<Task> => {
+    const response: AxiosResponse<Task> = await apiClient.put(`/api/${userId}/tasks/${taskId}`, taskData);
     return response.data;
-  }
+  },
 
   // Delete a task
-  async deleteTask(id: string): Promise<void> {
-    await axiosInstance.delete(`/tasks/${id}`);
-  }
+  deleteTask: async (userId: string, taskId: string): Promise<void> => {
+    await apiClient.delete(`/api/${userId}/tasks/${taskId}`);
+  },
 
-  // Toggle task completion status
-  async toggleComplete(id: string): Promise<Task> {
-    // First get the current task to determine its status
-    const currentTask = await this.getTaskById(id);
-
-    // Determine the new status
-    const newStatus = currentTask.status === 'completed' ? 'todo' : 'completed';
-
-    // Update the task with the new status
-    return this.updateTask(id, { status: newStatus });
-  }
-
-  // Get a specific task by ID
-  async getTaskById(id: string): Promise<Task> {
-    const response = await axiosInstance.get<Task>(`/tasks/${id}`);
+  // Mark a task as complete
+  completeTask: async (userId: string, taskId: string): Promise<Task> => {
+    const response: AxiosResponse<Task> = await apiClient.patch(`/api/${userId}/tasks/${taskId}/complete`, {
+      completed: true
+    });
     return response.data;
-  }
+  },
+};
 
-  // Get all projects for the authenticated user
-  async getProjects(filters?: {
-    search?: string;
-    sort_by?: 'created' | 'name' | 'updated';
-    order?: 'asc' | 'desc';
-  }): Promise<Project[]> {
-    const params = new URLSearchParams();
-    if (filters) {
-      Object.entries(filters).forEach(([key, value]) => {
-        if (value !== undefined && value !== null) {
-          params.append(key, String(value));
-        }
-      });
-    }
-
-    const queryString = params.toString();
-    const endpoint = queryString ? `/projects?${queryString}` : '/projects';
-
-    const response = await axiosInstance.get<Project[]>(endpoint);
+// Chat API functions
+export const chatApi = {
+  sendMessage: async (userId: string, message: string): Promise<ChatResponse> => {
+    const response: AxiosResponse<ChatResponse> = await apiClient.post(`/api/${userId}/chat`, {
+      message
+    });
     return response.data;
-  }
+  },
+};
 
-  // Create a new project
-  async createProject(projectData: Omit<Project, 'id' | 'created_at' | 'updated_at' | 'user_id'>): Promise<Project> {
-    const response = await axiosInstance.post<Project>('/projects', projectData);
-    return response.data;
-  }
-
-  // Update an existing project
-  async updateProject(id: string, projectData: Partial<Project>): Promise<Project> {
-    const response = await axiosInstance.put<Project>(`/projects/${id}`, projectData);
-    return response.data;
-  }
-
-  // Delete a project
-  async deleteProject(id: string): Promise<void> {
-    await axiosInstance.delete(`/projects/${id}`);
-  }
-
-  // Get a specific project by ID
-  async getProjectById(id: string): Promise<Project> {
-    const response = await axiosInstance.get<Project>(`/projects/${id}`);
-    return response.data;
-  }
-}
-
-// Create and export a singleton instance of the API client
-export const apiClient = new ApiClient();
-
-// Export the typed methods for direct use
-export const {
-  getTasks,
-  createTask,
-  updateTask,
-  deleteTask,
-  toggleComplete,
-  getTaskById,
-  getProjects,
-  createProject,
-  updateProject,
-  deleteProject,
-  getProjectById
-} = apiClient;
-
-// Also export the axios instance for direct use if needed
-export { axiosInstance };
-
-
-
-
+export default apiClient;
