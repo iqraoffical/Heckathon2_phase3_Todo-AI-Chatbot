@@ -4,3 +4,7 @@ node_modules/
 .next/
 dist/
 build/
+# Environment variables
+.env
+.env.*
+.env.local
