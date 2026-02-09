@@ -6,9 +6,8 @@ import { Task } from '../../lib/types';
 import { taskApi } from '../../lib/api';
 import TaskItem from '../../components/TaskItem';
 import TaskForm from '../../components/TaskForm';
-
-// Mock user ID - in a real app, this would come from authentication
-const userId = '123e4567-e89b-12d3-a456-426614174000';
+import { getCurrentSession } from '../../lib/auth-client';
+import { useRouter } from 'next/navigation';
 
 export default function TasksPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -16,15 +15,36 @@ export default function TasksPage() {
   const [showForm, setShowForm] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [filter, setFilter] = useState<'all' | 'active' | 'completed'>('all');
+  const [user, setUser] = useState<any>(null);
+  const router = useRouter();
 
   useEffect(() => {
-    fetchTasks();
-  }, [filter]);
+    const checkAuthAndLoadTasks = async () => {
+      try {
+        const session = await getCurrentSession();
+        if (!session?.user) {
+          // Redirect to sign in if not authenticated
+          router.push('/signin');
+          return;
+        }
+        
+        setUser(session.user);
+        await fetchTasks();
+      } catch (error) {
+        console.error('Error checking auth or fetching tasks:', error);
+        router.push('/signin');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkAuthAndLoadTasks();
+  }, [filter, router]);
 
   const fetchTasks = async () => {
     try {
       setLoading(true);
-      const tasksData = await taskApi.getTasks(userId, {
+      const tasksData = await taskApi.getTasks(user.id, {
         completed: filter === 'completed' ? true : filter === 'active' ? false : undefined
       });
       setTasks(tasksData);
@@ -37,7 +57,7 @@ export default function TasksPage() {
 
   const handleAddTask = async (taskData: Partial<Task>) => {
     try {
-      const newTask = await taskApi.createTask(userId, taskData);
+      const newTask = await taskApi.createTask(user.id, taskData);
       setTasks([...tasks, newTask]);
       setShowForm(false);
     } catch (error) {
@@ -49,7 +69,7 @@ export default function TasksPage() {
     if (!editingTask) return;
 
     try {
-      const updatedTask = await taskApi.updateTask(userId, editingTask.id, taskData);
+      const updatedTask = await taskApi.updateTask(user.id, editingTask.id, taskData);
       setTasks(tasks.map(t => t.id === editingTask.id ? updatedTask : t));
       setEditingTask(null);
       setShowForm(false);
@@ -64,10 +84,10 @@ export default function TasksPage() {
       if (taskToComplete) {
         if (taskToComplete.completed) {
           // If task is already completed, we would need an update call to uncomplete it
-          const updatedTask = await taskApi.updateTask(userId, taskId, { completed: false });
+          const updatedTask = await taskApi.updateTask(user.id, taskId, { completed: false });
           setTasks(tasks.map(t => t.id === taskId ? updatedTask : t));
         } else {
-          const completedTask = await taskApi.completeTask(userId, taskId);
+          const completedTask = await taskApi.completeTask(user.id, taskId);
           setTasks(tasks.map(t => t.id === taskId ? completedTask : t));
         }
       }
@@ -79,7 +99,7 @@ export default function TasksPage() {
   const handleDeleteTask = async (taskId: string) => {
     if (window.confirm('Are you sure you want to delete this task?')) {
       try {
-        await taskApi.deleteTask(userId, taskId);
+        await taskApi.deleteTask(user.id, taskId);
         setTasks(tasks.filter(t => t.id !== taskId));
       } catch (error) {
         console.error('Error deleting task:', error);
@@ -124,8 +144,8 @@ export default function TasksPage() {
               <a href="/chat" className="text-gray-700 hover:text-blue-600 font-medium">
                 Chat
               </a>
-              <a href="/login" className="px-4 py-2 border border-transparent rounded-md text-base font-medium text-blue-700 bg-blue-100 hover:bg-blue-200">
-                Sign in
+              <a href="/profile" className="text-gray-700 hover:text-blue-600 font-medium">
+                {user?.firstName || user?.email?.split('@')[0] || 'Profile'}
               </a>
             </div>
           </div>

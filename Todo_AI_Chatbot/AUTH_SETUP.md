@@ -9,8 +9,8 @@ Create a `.env.local` file in your project root with the following variables:
 DATABASE_URL="file:./db.sqlite"
 
 # Better Auth Configuration
-AUTH_SECRET="your-super-secret-auth-key-change-this-in-production"
-JWT_SECRET="your-super-secret-jwt-key-change-this-in-production"
+AUTH_SECRET="6IZYyqC8Q1jbZPRehXkYqV8aOYFzEQcv"
+JWT_SECRET="35fe54d50f8738bd98f64e7f3dc9a1c0d9474a5f3c11cb83b03d2225d5dfe22b"
 
 # Base URL for your application
 NEXT_PUBLIC_BASE_URL="http://localhost:3000"

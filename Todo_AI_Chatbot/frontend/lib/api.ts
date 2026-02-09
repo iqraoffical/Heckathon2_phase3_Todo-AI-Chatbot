@@ -1,6 +1,7 @@
 // lib/api.ts
 import axios, { AxiosResponse } from 'axios';
 import { Task, ChatRequest, ChatResponse } from './types';
+import { getAuthHeaders } from './auth-client';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
 
@@ -14,13 +15,15 @@ const apiClient = axios.create({
 
 // Request interceptor to add auth token
 apiClient.interceptors.request.use(
-  (config) => {
-    // Get token from wherever you store it (localStorage, cookie, etc.)
-    const token = localStorage.getItem('auth_token');
+  async (config) => {
+    // Get auth headers using the auth client
+    const headers = await getAuthHeaders();
     
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
+    // Merge the auth headers with the existing config headers
+    config.headers = {
+      ...config.headers,
+      ...headers
+    };
     
     return config;
   },
@@ -36,8 +39,7 @@ apiClient.interceptors.response.use(
     // Handle specific error cases
     if (error.response?.status === 401) {
       // Redirect to login or clear auth state
-      localStorage.removeItem('auth_token');
-      window.location.href = '/login'; // Or however you handle auth redirects
+      window.location.href = '/signin'; // Or however you handle auth redirects
     }
     return Promise.reject(error);
   }

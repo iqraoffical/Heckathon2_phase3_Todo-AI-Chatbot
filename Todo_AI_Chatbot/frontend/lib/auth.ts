@@ -36,7 +36,7 @@ export const login = async (email: string, password: string): Promise<{ user: Us
   try {
     // In a real app, this would be an API call to your backend
     // For now, we'll simulate the login
-    const response = await fetch(`${process.env.NEXT_PUBLIC_BETTER_AUTH_URL}/api/auth/login`, {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/auth/sign-in`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -46,8 +46,8 @@ export const login = async (email: string, password: string): Promise<{ user: Us
 
     if (response.ok) {
       const data = await response.json();
-      localStorage.setItem('auth_token', data.token);
-      return { user: data.user, token: data.token };
+      localStorage.setItem('auth_token', data.access_token);
+      return { user: data.user, token: data.access_token };
     }
 
     return null;
@@ -67,7 +67,7 @@ export const logout = (): void => {
 // Register function
 export const register = async (email: string, password: string, firstName?: string, lastName?: string): Promise<{ user: User; token: string } | null> => {
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_BETTER_AUTH_URL}/api/auth/register`, {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/auth/sign-up`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -77,8 +77,8 @@ export const register = async (email: string, password: string, firstName?: stri
 
     if (response.ok) {
       const data = await response.json();
-      localStorage.setItem('auth_token', data.token);
-      return { user: data.user, token: data.token };
+      localStorage.setItem('auth_token', data.access_token);
+      return { user: data.user, token: data.access_token };
     }
 
     return null;

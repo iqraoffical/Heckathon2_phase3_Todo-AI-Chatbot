@@ -17,7 +17,7 @@ def validate_user_from_jwt(credentials: HTTPAuthorizationCredentials = Depends(s
     Validate the user from JWT token and return user info
     """
     token = credentials.credentials
-    
+
     try:
         # Decode the JWT token
         payload = jwt.decode(token, settings.BETTER_AUTH_SECRET, algorithms=["HS256"])

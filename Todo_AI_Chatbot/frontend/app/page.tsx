@@ -1,12 +1,39 @@
 // app/page.tsx
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useState } from 'react';
+import { getCurrentSession } from '../lib/auth-client';
 
 export default function HomePage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const checkAuthStatus = async () => {
+      try {
+        const session = await getCurrentSession();
+        setUser(session?.user || null);
+      } catch (error) {
+        console.error('Error checking auth status:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkAuthStatus();
+  }, []);
+
+  const handleLogout = async () => {
+    try {
+      // Clear user session
+      setUser(null);
+      // In a real app, you would call a logout function here
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -26,12 +53,36 @@ export default function HomePage() {
               <Link href="/chat" className="text-gray-700 hover:text-blue-600 font-medium">
                 Chat
               </Link>
-              <Link 
-                href="/login" 
-                className="px-4 py-2 border border-transparent rounded-md text-base font-medium text-blue-700 bg-blue-100 hover:bg-blue-200"
-              >
-                Sign in
-              </Link>
+              {loading ? (
+                <div className="h-8 w-24 bg-gray-200 rounded-md animate-pulse"></div>
+              ) : user ? (
+                <div className="flex items-center space-x-4">
+                  <Link href="/profile" className="text-gray-700 hover:text-blue-600 font-medium">
+                    {user.firstName || user.email.split('@')[0]}
+                  </Link>
+                  <button 
+                    onClick={handleLogout}
+                    className="px-4 py-2 border border-transparent rounded-md text-base font-medium text-blue-700 bg-blue-100 hover:bg-blue-200"
+                  >
+                    Sign out
+                  </button>
+                </div>
+              ) : (
+                <div className="flex space-x-3">
+                  <Link 
+                    href="/signin" 
+                    className="px-4 py-2 border border-transparent rounded-md text-base font-medium text-blue-700 bg-blue-100 hover:bg-blue-200"
+                  >
+                    Sign in
+                  </Link>
+                  <Link 
+                    href="/signup" 
+                    className="px-4 py-2 border border-transparent rounded-md text-base font-medium text-white bg-blue-600 hover:bg-blue-700"
+                  >
+                    Sign up
+                  </Link>
+                </div>
+              )}
             </div>
             <div className="md:hidden flex items-center">
               <button
@@ -56,9 +107,30 @@ export default function HomePage() {
               <Link href="/chat" className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50">
                 Chat
               </Link>
-              <Link href="/login" className="block px-3 py-2 rounded-md text-base font-medium text-blue-700 bg-blue-100">
-                Sign in
-              </Link>
+              {loading ? (
+                <div className="h-10 w-full bg-gray-200 rounded-md animate-pulse"></div>
+              ) : user ? (
+                <>
+                  <Link href="/profile" className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50">
+                    {user.firstName || user.email.split('@')[0]}
+                  </Link>
+                  <button 
+                    onClick={handleLogout}
+                    className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-blue-700 bg-blue-100 hover:bg-blue-200"
+                  >
+                    Sign out
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link href="/signin" className="block px-3 py-2 rounded-md text-base font-medium text-blue-700 bg-blue-100">
+                    Sign in
+                  </Link>
+                  <Link href="/signup" className="block px-3 py-2 rounded-md text-base font-medium text-white bg-blue-600">
+                    Sign up
+                  </Link>
+                </>
+              )}
             </div>
           </div>
         )}
@@ -77,18 +149,29 @@ export default function HomePage() {
           </p>
           
           <div className="flex flex-col sm:flex-row justify-center gap-4 mb-16">
-            <Link 
-              href="/tasks" 
-              className="px-8 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition duration-300 shadow-md"
-            >
-              View Tasks
-            </Link>
-            <Link 
-              href="/chat" 
-              className="px-8 py-3 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition duration-300 shadow-md"
-            >
-              Talk to AI Assistant
-            </Link>
+            {user ? (
+              <>
+                <Link 
+                  href="/tasks" 
+                  className="px-8 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition duration-300 shadow-md"
+                >
+                  View Tasks
+                </Link>
+                <Link 
+                  href="/chat" 
+                  className="px-8 py-3 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition duration-300 shadow-md"
+                >
+                  Talk to AI Assistant
+                </Link>
+              </>
+            ) : (
+              <Link 
+                href="/signin" 
+                className="px-8 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition duration-300 shadow-md"
+              >
+                Get Started
+              </Link>
+            )}
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-16">

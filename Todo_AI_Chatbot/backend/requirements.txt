@@ -6,7 +6,7 @@ pydantic-settings==2.1.0
 SQLAlchemy==2.0.23
 asyncpg==0.29.0
 psycopg2-binary==2.9.9
-better-auth==0.0.1b11
+PyJWT==2.8.0
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
 python-multipart==0.0.6

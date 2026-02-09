@@ -1,5 +1,5 @@
 from sqlmodel import SQLModel, Field, create_engine, Session, select
-from sqlalchemy import func
+from sqlalchemy import func, ForeignKey
 from typing import Optional
 import uuid
 from datetime import datetime
@@ -21,8 +21,8 @@ class UserBase(SQLModel):
 class User(UserBase, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     password_hash: str = Field(nullable=False)
-    created_at: datetime = Field(default=datetime.utcnow())
-    updated_at: datetime = Field(default=datetime.utcnow())
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
 
     __tablename__ = "users"
 
@@ -36,9 +36,9 @@ class TaskBase(SQLModel):
 
 class Task(TaskBase, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    user_id: uuid.UUID = Field(foreign_key="users.id", ondelete="CASCADE")
-    created_at: datetime = Field(default=datetime.utcnow())
-    updated_at: datetime = Field(default=datetime.utcnow())
+    user_id: uuid.UUID = Field(default=None, foreign_key="users.id")  # Removed ondelete for compatibility
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
 
     __tablename__ = "tasks"
 
@@ -49,9 +49,9 @@ class ConversationBase(SQLModel):
 
 class Conversation(ConversationBase, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    user_id: uuid.UUID = Field(foreign_key="users.id", ondelete="CASCADE")
-    created_at: datetime = Field(default=datetime.utcnow())
-    updated_at: datetime = Field(default=datetime.utcnow())
+    user_id: uuid.UUID = Field(default=None, foreign_key="users.id")  # Removed ondelete for compatibility
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
 
     __tablename__ = "conversations"
 
@@ -63,8 +63,8 @@ class MessageBase(SQLModel):
 
 class Message(MessageBase, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    conversation_id: uuid.UUID = Field(foreign_key="conversations.id", ondelete="CASCADE")
-    timestamp: datetime = Field(default=datetime.utcnow())
+    conversation_id: uuid.UUID = Field(default=None, foreign_key="conversations.id")  # Removed ondelete for compatibility
+    timestamp: datetime = Field(default_factory=datetime.utcnow)
 
     __tablename__ = "messages"
 

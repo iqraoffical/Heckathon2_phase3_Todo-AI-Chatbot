@@ -5,11 +5,44 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Message, ChatResponse } from '../../lib/types';
 import { chatApi } from '../../lib/api';
 import ChatInterface from '../../components/ChatInterface';
-
-// Mock user ID - in a real app, this would come from authentication
-const userId = '123e4567-e89b-12d3-a456-426614174000';
+import { getCurrentSession } from '../../lib/auth-client';
+import { useRouter } from 'next/navigation';
 
 export default function ChatPage() {
+  const [user, setUser] = useState<any>(null);
+  const router = useRouter();
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const session = await getCurrentSession();
+        if (!session?.user) {
+          // Redirect to sign in if not authenticated
+          router.push('/signin');
+          return;
+        }
+        
+        setUser(session.user);
+      } catch (error) {
+        console.error('Error checking auth:', error);
+        router.push('/signin');
+      }
+    };
+
+    checkAuth();
+  }, [router]);
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Checking authentication...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Navigation */}
@@ -28,8 +61,8 @@ export default function ChatPage() {
               <a href="/chat" className="text-blue-600 font-medium border-b-2 border-blue-600">
                 Chat
               </a>
-              <a href="/login" className="px-4 py-2 border border-transparent rounded-md text-base font-medium text-blue-700 bg-blue-100 hover:bg-blue-200">
-                Sign in
+              <a href="/profile" className="text-gray-700 hover:text-blue-600 font-medium">
+                {user?.firstName || user?.email?.split('@')[0] || 'Profile'}
               </a>
             </div>
           </div>
@@ -44,7 +77,7 @@ export default function ChatPage() {
               <p className="text-gray-600 mt-1">Ask me to manage your tasks</p>
             </div>
             <div className="p-6">
-              <ChatInterface userId={userId} />
+              <ChatInterface userId={user.id} />
             </div>
           </div>
         </div>

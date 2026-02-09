@@ -3,11 +3,23 @@ import { NextRequest, NextResponse } from "next/server";
 export async function middleware(request: NextRequest) {
   try {
     // Check if there's a token in the request cookies
-    const token = request.cookies.get('access_token')?.value;
+    let token = request.cookies.get('access_token')?.value;
 
+    // If not in cookies, check for token in Authorization header (for API calls)
+    if (!token) {
+      const authHeader = request.headers.get('authorization');
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        token = authHeader.substring(7); // Remove 'Bearer ' prefix
+      }
+    }
+
+    // For frontend routes, check localStorage via client-side JavaScript would be needed
+    // But for server-side middleware, we rely on cookies or headers
     // Define protected routes
     const isProtectedRoute = request.nextUrl.pathname.startsWith('/tasks') ||
-                            request.nextUrl.pathname.startsWith('/dashboard');
+                            request.nextUrl.pathname.startsWith('/dashboard') ||
+                            request.nextUrl.pathname.startsWith('/chat') ||
+                            request.nextUrl.pathname.startsWith('/profile');
 
     // If user is trying to access a protected route but not authenticated
     if (isProtectedRoute && !token) {
